@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculadora de Combustível</title>
+<style>
+:root{
+  --bg:#121212;--card:#1c1c1e;--card2:#161618;--text:#e8e8ea;--muted:#9a9aa0;--line:#2c2c30;--accent:#8ab4f8;--track:#2f3340;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){--bg:#f4f4f6;--card:#fff;--card2:#fff;--text:#1b1b1f;--muted:#6b6b73;--line:#d9d9de;--accent:#1a73e8;--track:#d5d8e0}
+}
+:root[data-theme="light"]{--bg:#f4f4f6;--card:#fff;--card2:#fff;--text:#1b1b1f;--muted:#6b6b73;--line:#d9d9de;--accent:#1a73e8;--track:#d5d8e0}
+:root[data-theme="dark"]{--bg:#121212;--card:#1c1c1e;--card2:#161618;--text:#e8e8ea;--muted:#9a9aa0;--line:#2c2c30;--accent:#8ab4f8;--track:#2f3340}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;padding:20px 16px 32px}
+.wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:1.9rem;font-weight:500;line-height:1.15;margin-top:6px}
+.sub{color:var(--muted);font-size:1rem;margin-bottom:6px}
+.card{background:var(--card);border-radius:20px;padding:16px 20px}
+.lbl{color:var(--muted);font-size:1rem}
+.val{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:1.9rem;font-weight:600;margin-top:4px}
+.timer{background:var(--card2);border:1px solid var(--line);border-radius:22px;padding:20px;text-align:center}
+.time{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:3.2rem;font-weight:600;letter-spacing:1px}
+.btns{display:flex;gap:10px;justify-content:center;margin-top:14px}
+.btn{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:12px 26px;font-size:1.05rem;cursor:pointer}
+.btn:active{background:var(--line)}
+.row{display:flex;justify-content:space-between;align-items:baseline;font-size:1.1rem}
+.row b{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:500}
+.ctl+.ctl{margin-top:22px}
+input[type=range]{width:100%;height:36px;margin-top:6px;accent-color:var(--accent);background:transparent}
+.chart{background:var(--card2);border:1px solid var(--line);border-radius:22px;padding:8px}
+.openp{margin-top:6px;width:100%;background:var(--accent);color:#000;border:none;font-weight:600}
+.panel{position:fixed;inset:0;z-index:50;background:#000;color:#f2f2f4;display:none;flex-direction:column;gap:10px;
+  padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.panel.on{display:flex}
+.pbar{display:flex;gap:8px}
+.pbar button{flex:1;background:#17171a;border:1px solid #2a2a2e;color:#f2f2f4;border-radius:12px;padding:11px 6px;font-size:.95rem;cursor:pointer}
+.pbar #pToggle{background:#22c55e;color:#000;font-weight:700;border:none;flex:1.6}
+.pbody{flex:1;min-height:0;display:grid;gap:10px;grid-template-rows:minmax(0,1.1fr) minmax(0,1fr)}
+@media (orientation:landscape){.pbody{grid-template-rows:none;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}}
+.gauge{min-height:0;min-width:0}
+.gauge svg{width:100%;height:100%}
+.gauge text{fill:#f2f2f4;font-family:ui-monospace,Menlo,Consolas,monospace}
+.tiles{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:minmax(0,1fr);gap:10px;min-height:0}
+.tile{background:#151517;border-radius:16px;padding:8px 14px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.tile span{color:#8e8e96;font-size:clamp(.7rem,2.6vmin,1rem)}
+.tile b{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600;font-size:clamp(1.15rem,5.6vmin,2.6rem);white-space:nowrap}
+.tile.big b{color:#8ab4f8}
+.gps-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.gps-head .btn{padding:10px 18px;font-size:.95rem;white-space:nowrap}
+.gstat{color:var(--muted);font-size:.85rem;margin-top:8px}
+.ggrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.ggrid .val{font-size:1.35rem}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Calculadora de Combustível</h1>
+    <p class="sub">Monitoramento de consumo e custo acumulado em tempo real</p>
+    <button class="btn openp" id="openPanel">Abrir painel do carro</button>
+  </div>
+
+  <div class="card"><div class="lbl">Custo Acumulado</div><div class="val" id="cost">R$ 0,00</div></div>
+  <div class="card"><div class="lbl">Consumo Estimado</div><div class="val" id="liters">0,00 L</div></div>
+  <div class="card"><div class="lbl">Custo por Hora</div><div class="val" id="perHour">R$ 0,00</div></div>
+
+  <div class="timer">
+    <div class="time" id="time">00:00:00</div>
+    <div class="btns">
+      <button class="btn" id="toggle">Iniciar</button>
+      <button class="btn" id="reset">Zerar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctl">
+      <div class="row"><span>Preço do Combustível (R$/L)</span><b id="priceV"></b></div>
+      <input type="range" id="price" min="2" max="10" step="0.01" value="4.99">
+    </div>
+    <div class="ctl">
+      <div class="row"><span>Consumo Estimado (L/h)</span><b id="lphV"></b></div>
+      <input type="range" id="lph" min="0.5" max="15" step="0.1" value="2.5">
+    </div>
+    <div class="ctl">
+      <div class="row"><span>Simulação de Tempo (minutos)</span><b id="simV"></b></div>
+      <input type="range" id="sim" min="0" max="120" step="1" value="0">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="gps-head"><span style="font-size:1.1rem">GPS</span><button class="btn" id="gpsBtn">Ativar GPS</button></div>
+    <div class="gstat" id="gStatus">Desligado • mede distância e velocidade reais</div>
+    <div class="ggrid">
+      <div><div class="lbl">Distância</div><div class="val" id="gDist">0,00 km</div></div>
+      <div><div class="lbl">Velocidade atual</div><div class="val" id="gSpeed">0,0 km/h</div></div>
+      <div><div class="lbl">Velocidade média</div><div class="val" id="gAvg">0,0 km/h</div></div>
+      <div><div class="lbl">Custo por km</div><div class="val" id="gCpk">—</div></div>
+    </div>
+  </div>
+
+  <div class="chart"><svg id="chart" viewBox="0 0 360 230"></svg></div>
+</div>
+
+<div class="panel" id="panel">
+  <div class="pbar">
+    <button id="pToggle">Iniciar</button>
+    <button id="pGps">Ativar GPS</button>
+    <button id="pFull">Tela cheia</button>
+    <button id="pClose">Fechar</button>
+  </div>
+  <div class="pbody">
+    <div class="gauge">
+      <svg viewBox="0 0 240 240" preserveAspectRatio="xMidYMid meet">
+        <circle cx="120" cy="120" r="100" fill="none" stroke="#25252a" stroke-width="16" stroke-linecap="round" stroke-dasharray="471.2 628.3" transform="rotate(135 120 120)"/>
+        <circle id="pArc" cx="120" cy="120" r="100" fill="none" stroke="#8ab4f8" stroke-width="16" stroke-linecap="round" stroke-dasharray="0 628.3" transform="rotate(135 120 120)"/>
+        <text id="pSpeed" x="120" y="138" text-anchor="middle" font-size="68" font-weight="700">0</text>
+        <text x="120" y="164" text-anchor="middle" font-size="16" style="fill:#8e8e96">km/h</text>
+        <text id="pHint" x="120" y="214" text-anchor="middle" font-size="12" style="fill:#8e8e96"></text>
+      </svg>
+    </div>
+    <div class="tiles">
+      <div class="tile big"><span>Custo</span><b id="pCost">R$ 0,00</b></div>
+      <div class="tile"><span>Tempo</span><b id="pTime">00:00:00</b></div>
+      <div class="tile"><span>Combustível</span><b id="pLiters">0,00 L</b></div>
+      <div class="tile"><span>Distância</span><b id="pDist">0,00 km</b></div>
+      <div class="tile"><span>Vel. média</span><b id="pAvg">0,0 km/h</b></div>
+      <div class="tile"><span>Custo por km</span><b id="pCpk">—</b></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY='calc-combustivel-v3';
+const $=id=>document.getElementById(id);
+// Estado por timestamp: continua correto com a tela bloqueada
+let st={acc:0,start:null},tick=null;
+
+const fmt=(n,d)=>n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const brl=n=>'R$ '+fmt(n,2);
+const elapsed=()=>st.acc+(st.start?Date.now()-st.start:0);
+
+function save(){try{localStorage.setItem(KEY,JSON.stringify({st,price:$('price').value,lph:$('lph').value}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(!d)return;if(d.st)st=d.st;if(d.price)$('price').value=d.price;if(d.lph)$('lph').value=d.lph}catch(e){}}
+
+function niceStep(x){const p=Math.pow(10,Math.floor(Math.log10(x)));const m=x/p;return (m<=1?1:m<=2?2:m<=5?5:10)*p}
+
+function drawChart(price,lph,ms){
+  const mins=ms/60000, T=Math.max(60,Math.ceil(mins/60)*60);
+  const rate=lph*price/60; // R$ por minuto
+  const maxC=rate*T, step=niceStep(Math.max(maxC,1)/3), top=step*Math.ceil(Math.max(maxC,1)/step);
+  const L=74,R=14,Tp=16,B=44,W=360,H=230,pw=W-L-R,ph=H-Tp-B;
+  const x=t=>L+pw*t/T, y=c=>Tp+ph-ph*c/top;
+  let s='';
+  for(let c=0;c<=top+1e-9;c+=step){s+=`<line x1="${L}" x2="${W-R}" y1="${y(c)}" y2="${y(c)}" stroke="var(--line)"/><text x="${L-8}" y="${y(c)+4}" text-anchor="end">R$ ${fmt(c,2)}</text>`}
+  const pts=[];for(let i=0;i<=10;i++){const t=T*i/10;pts.push([x(t),y(rate*t)])}
+  const line=pts.map(p=>p.join(',')).join(' ');
+  s+=`<polygon points="${L},${y(0)} ${line} ${pts[10][0]},${y(0)}" fill="var(--accent)" opacity=".15"/>`;
+  s+=`<polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
+  pts.forEach(p=>s+=`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--card2)" stroke="var(--accent)" stroke-width="2"/>`);
+  if(mins>0){const cx=x(Math.min(mins,T));s+=`<line x1="${cx}" x2="${cx}" y1="${Tp}" y2="${y(0)}" stroke="var(--text)" stroke-dasharray="3 3" opacity=".6"/><circle cx="${cx}" cy="${y(rate*Math.min(mins,T))}" r="6" fill="var(--text)"/>`}
+  for(let i=0;i<=5;i++){const t=T*i/5;s+=`<text x="${x(t)}" y="${H-22}" text-anchor="middle">${Math.round(t)}m</text>`}
+  s+=`<text x="${L+pw/2}" y="${H-4}" text-anchor="middle" style="font-family:system-ui,sans-serif;font-size:13px">Tempo (minutos)</text>`;
+  $('chart').innerHTML=s;
+}
+
+function render(){
+  const price=parseFloat($('price').value)||0, lph=parseFloat($('lph').value)||0;
+  const ms=elapsed(), secs=Math.floor(ms/1000), h=ms/3600000, p=n=>String(n).padStart(2,'0');
+  $('time').textContent=p(Math.floor(secs/3600))+':'+p(Math.floor(secs%3600/60))+':'+p(secs%60);
+  $('cost').textContent=brl(h*lph*price);
+  $('liters').textContent=fmt(h*lph,2)+' L';
+  $('perHour').textContent=brl(lph*price);
+  $('priceV').textContent=brl(price);
+  $('lphV').textContent=fmt(lph,1)+' L/h';
+  const m=Math.floor(ms/60000);
+  if(document.activeElement!==$('sim'))$('sim').value=Math.min(120,m);
+  $('simV').textContent=m+' min';
+  $('toggle').textContent=st.start?'Pausar':(ms>0?'Retomar':'Iniciar');
+  gpsRender(price,lph,ms);
+  panelRender(price,lph,ms);
+  drawChart(price,lph,ms);
+}
+
+// ---- GPS ----
+let watchId=null,last=null,curSpeed=0,wake=null;
+function hav(a,b){const r=Math.PI/180,x=Math.sin((b.lat-a.lat)*r/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin((b.lon-a.lon)*r/2)**2;return 12742*Math.asin(Math.sqrt(x))}
+async function keepAwake(){try{if('wakeLock' in navigator&&watchId!==null&&st.start&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>wake=null)}}catch(e){}}
+function releaseWake(){try{if(wake){wake.release();wake=null}}catch(e){}}
+function onPos(p){
+  const c=p.coords;
+  $('gStatus').textContent='GPS ativo • precisão ±'+Math.round(c.accuracy)+' m';
+  if(c.speed!=null&&!isNaN(c.speed))curSpeed=c.speed*3.6;
+  if(c.accuracy<=40){
+    const cur={lat:c.latitude,lon:c.longitude};
+    if(!last||!st.start)last=cur;
+    else{const d=hav(last,cur);if(d*1000>Math.max(4,c.accuracy/2)){st.dist=(st.dist||0)+d;last=cur;save()}}
+  }
+  render();
+}
+function onErr(e){
+  stopGps();
+  $('gStatus').textContent=e.code===1?'Permissão de localização negada ou bloqueada nesta página':'Sem sinal de GPS. Tente em local aberto';
+}
+function stopGps(){if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;last=null;curSpeed=0;releaseWake();$('gpsBtn').textContent='Ativar GPS';render()}
+$('gpsBtn').onclick=()=>{
+  if(watchId!==null){stopGps();$('gStatus').textContent='Desligado • mede distância e velocidade reais';return}
+  if(!navigator.geolocation){$('gStatus').textContent='Este aparelho/navegador não tem GPS disponível';return}
+  $('gStatus').textContent='Buscando sinal…';
+  watchId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+  $('gpsBtn').textContent='Desativar GPS';keepAwake();
+};
+function gpsRender(price,lph,ms){
+  const d=st.dist||0,h=ms/3600000;
+  $('gDist').textContent=fmt(d,2)+' km';
+  $('gSpeed').textContent=fmt(curSpeed,1)+' km/h';
+  $('gAvg').textContent=fmt(h>0?d/h:0,1)+' km/h';
+  $('gCpk').textContent=d>0.01?brl(h*lph*price/d):'—';
+}
+
+// ---- Painel do carro ----
+function panelRender(price,lph,ms){
+  if(!$('panel').classList.contains('on'))return;
+  const d=st.dist||0,h=ms/3600000,cost=h*lph*price;
+  const max=curSpeed>200?300:curSpeed>120?200:120;
+  $('pArc').setAttribute('stroke-dasharray',(Math.min(curSpeed/max,1)*471.2).toFixed(1)+' 628.3');
+  $('pSpeed').textContent=Math.round(curSpeed);
+  $('pHint').textContent=watchId===null?'GPS desligado • toque em Ativar GPS':'Escala 0–'+max;
+  $('pCost').textContent=brl(cost);
+  $('pTime').textContent=$('time').textContent;
+  $('pLiters').textContent=fmt(h*lph,2)+' L';
+  $('pDist').textContent=fmt(d,2)+' km';
+  $('pAvg').textContent=fmt(h>0?d/h:0,1)+' km/h';
+  $('pCpk').textContent=d>0.01?brl(cost/d):'—';
+  $('pToggle').textContent=$('toggle').textContent;
+  $('pGps').textContent=$('gpsBtn').textContent;
+}
+$('openPanel').onclick=async()=>{
+  $('panel').classList.add('on');render();
+  try{if('wakeLock' in navigator&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>wake=null)}}catch(e){}
+};
+$('pClose').onclick=()=>{
+  $('panel').classList.remove('on');
+  try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
+  if(!st.start)releaseWake();
+};
+$('pToggle').onclick=()=>$('toggle').click();
+$('pGps').onclick=()=>$('gpsBtn').click();
+$('pFull').onclick=()=>{
+  try{document.fullscreenElement?document.exitFullscreen():$('panel').requestFullscreen()}catch(e){}
+};
+
+$('toggle').onclick=()=>{
+  if(st.start){st.acc=elapsed();st.start=null;clearInterval(tick);releaseWake()}
+  else{st.start=Date.now();clearInterval(tick);tick=setInterval(render,250);keepAwake()}
+  save();render();
+};
+$('reset').onclick=()=>{st={acc:0,start:null,dist:0};clearInterval(tick);releaseWake();save();render()};
+$('sim').oninput=e=>{st.acc=e.target.value*60000;if(st.start)st.start=Date.now();save();render()};
+['price','lph'].forEach(id=>$(id).addEventListener('input',()=>{render();save()}));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();keepAwake()}});
+
+load();
+if(st.start)tick=setInterval(render,250);
+render();
+</script>
+</body>
+</html>
